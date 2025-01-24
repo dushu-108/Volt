@@ -25,23 +25,46 @@ const CodeGenerationConfig = {
 };
 
 const generateCodeWithAI = async (prompt) => {
-  const chat = model.startChat({
-    generationConfig: CodeGenerationConfig,
-    history: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: "You are a code generator assistant. Generate code based on the following schema:\n{\n  \"projectTitle\": \"\",\n  \"explanation\": \"\",\n  \"files\": {\n    \"filename\": {\n      \"code\": \"\"\n    }\n  },\n  \"generatedFiles\": []\n}\nKeep the code concise and efficient. Use Tailwind CSS for styling and only use necessary lucide-react icons."
-          }
-        ]
-      }
-    ],
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 55000); // Extended timeout to 55 seconds
 
-  const result = await chat.sendMessage(prompt);
-  const response = await result.response;
-  return response.text();
+  try {
+    const chat = model.startChat({
+      generationConfig: {
+        ...CodeGenerationConfig,
+        streamingEnabled: true, // Enable streaming
+      },
+      history: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: "You are a code generator assistant. Generate code based on the following schema:\n{\n  \"projectTitle\": \"\",\n  \"explanation\": \"\",\n  \"files\": {\n    \"filename\": {\n      \"code\": \"\"\n    }\n  },\n  \"generatedFiles\": []\n}\nKeep the code concise and efficient. Use Tailwind CSS for styling and only use necessary lucide-react icons."
+            }
+          ]
+        }
+      ],
+    });
+
+    const result = await chat.sendMessageStream(prompt, {
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    
+    let fullResponse = '';
+    for await (const chunk of result) {
+      fullResponse += chunk.text();
+    }
+    
+    return fullResponse;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Code generation timed out after 55 seconds. Please try again with a simpler prompt.');
+    }
+    throw error;
+  }
 };
 
 export const optimizedCodeGeneration = debounceCodeGeneration(
