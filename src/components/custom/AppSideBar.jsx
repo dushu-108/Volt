@@ -22,12 +22,12 @@ function AppSideBar() {
 
   return (
     <div>
-      <Sidebar>
+      <Sidebar className="bg-black">
         <SidebarHeader className="p-5">
           <Image src={"/pngwing.com.png"} alt="Logo" width={40} height={40} />
         </SidebarHeader>
         <SidebarContent className="p-5">
-          <Button onClick={handleStartNewChat}>
+          <Button onClick={handleStartNewChat} className="bg-white text-black">
             <MessageCircleCode />
             Start New Chat
           </Button>
